@@ -4,6 +4,10 @@
 
 - Allow configuration of the HIE file extension using the `--hie-extension` command-line flag
 
+### [`3.0.0][v3.0.0] - *2021-08-10*
+
+- Replace dhall configuration with a json file. The configuration file is not all that complicated, and incurring a dependency on dhall doubles the transitive closure of weeder.
+
 ### [`2.1.3`][v2.1.3] - *2020-12-11*
 
 - Support `dhall-1.35`, `dhall-1.36` and `dhall-1.37`.

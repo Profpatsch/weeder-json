@@ -4,6 +4,7 @@
 {-# language LambdaCase #-}
 {-# language NamedFieldPuns #-}
 {-# language OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | This module provides an entry point to the Weeder executable.
 
@@ -15,7 +16,7 @@ import Control.Monad.IO.Class ( liftIO )
 import Data.Bool
 import Data.Foldable
 import Data.Version ( showVersion )
-import System.Exit ( exitFailure )
+import System.Exit ( exitFailure, die )
 
 -- containers
 import qualified Data.Map.Strict as Map
@@ -23,9 +24,6 @@ import qualified Data.Set as Set
 
 -- text
 import qualified Data.Text as T
-
--- dhall
-import qualified Dhall
 
 -- directory
 import System.Directory ( canonicalizePath, doesDirectoryExist, doesFileExist, doesPathExist, listDirectory, withCurrentDirectory )
@@ -55,23 +53,26 @@ import Control.Monad.Trans.State.Strict ( execStateT )
 import Weeder
 import Weeder.Config
 import Paths_weeder (version)
+import qualified Data.Aeson as Aeson
 
 
 -- | Parse command line arguments and into a 'Config' and run 'mainWithConfig'.
 main :: IO ()
 main = do
-  (configExpr, hieExt, hieDirectories) <-
+  (configFile, hieExt, hieDirectories) <-
     execParser $
       info (optsP <**> helper <**> versionP) mempty
 
-  Dhall.input config configExpr >>= mainWithConfig hieExt hieDirectories
+  Aeson.eitherDecodeFileStrict' @Config (T.unpack configFile) >>= \case
+    Left err -> die ("weeder: Error reading config JSON:\n" <> err)
+    Right cfg -> mainWithConfig hieExt hieDirectories cfg
   where
     optsP = (,,)
         <$> strOption
             ( long "config"
-                <> help "A Dhall expression for Weeder's configuration. Can either be a file path (a Dhall import) or a literal Dhall expression."
-                <> value "./weeder.dhall"
-                <> metavar "<weeder.dhall>"
+                <> help "Path to a JSON expression for Weeder's configuration."
+                <> value "./weeder.json"
+                <> metavar "<weeder.json>"
                 <> showDefaultWith T.unpack
             )
         <*> strOption
