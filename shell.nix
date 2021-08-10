@@ -1,10 +1,37 @@
+{ pkgs ? import <nixpkgs> {} }:
+
 let
-  hsPkgs = import ./default.nix;
-in
-hsPkgs.shellFor {
-  withHoogle = true;
+  # fetch a github tarball, at evaluation time
+  githubSrc = {
+    owner,
+    repo,
+    revision,
+    sha256
+  }:
+    builtins.fetchTarball {
+      url = "https://github.com/${owner}/${repo}/archive/${revision}.tar.gz";
+      inherit sha256;
+    };
 
-  tools = { cabal = "3.2.0.0"; haskell-language-server = "latest"; };
+  # easy-hls-nix source, as provided from the project.toml
+  easy-hls-nixSrc = githubSrc {
+    owner = "jkachmar";
+    repo = "easy-hls-nix";
+    # 2021-06-26
+    revision = "9d64543a015563942c954b89addc1108800ed134";
+    sha256 = "1szq3g34dv22fqzil549mvpdd1865s64vqnfxj0l2aw9ha32jxyz";
+  };
 
-  exactDeps = true;
+  easy-hls-nix = pkgs.callPackage easy-hls-nixSrc {
+    ghcVersions = [ pkgs.haskellPackages.ghc.version ];
+  };
+
+in pkgs.haskellPackages.shellFor {
+  packages = _hps: [
+    (import ./default.nix { inherit pkgs; })
+  ];
+  buildInputs = [
+    pkgs.cabal-install
+    easy-hls-nix
+  ];
 }
